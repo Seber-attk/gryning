@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gryning</title>
+  <title>Alif Quran Sverige</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#4CAF50">
   <link rel="icon" href="icon-192.png">
@@ -257,11 +257,11 @@
 </head>
 <body>
 
-  <div id="loading-view" class="loading-msg">🔤 Gryning laddas…</div>
+  <div id="loading-view" class="loading-msg">🔤 Alif Quran Sverige laddas…</div>
 
   <div id="auth-view" class="auth-wrap" style="display:none;">
     <div class="auth-card">
-      <h1 style="color:var(--primary); margin-top:0;">🔤 Gryning</h1>
+      <h1 style="color:var(--primary); margin-top:0;">🔤 Alif Quran Sverige</h1>
       <div class="auth-tabs">
         <div id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">Logga in</div>
         <div id="tab-signup" class="auth-tab" onclick="switchAuthTab('signup')">Registrera dig</div>
@@ -279,13 +279,15 @@
         <input type="text" id="auth-name" placeholder="t.ex. Erik">
       </div>
       <button id="auth-submit-btn" class="btn" style="width:100%; padding:12px;" onclick="handleAuthSubmit()">Logga in</button>
+      <p id="forgot-password-link" style="text-align:center; margin:10px 0 0 0;"><a href="#" onclick="handleForgotPassword(); return false;" style="color:var(--primary); font-size:0.85rem;">Glömt lösenord?</a></p>
       <div id="auth-error" class="auth-error"></div>
+      <div style="text-align:center;margin-top:10px;font-size:.8rem;"><a href="privacy.html" target="_blank" style="color:#888;">🔒 Integritetspolicy</a></div>
     </div>
   </div>
 
   <div id="app-root" style="display:none;">
     <header>
-      <h1 onclick="showView('student-home')">🔤 Gryning</h1>
+      <h1 onclick="showView('student-home')">🔤 Alif Quran Sverige</h1>
       <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
         <div class="xp-badge" id="xp-badge">⚡ <span id="total-xp">0</span> XP</div>
         <button id="sound-toggle-btn" class="sound-toggle-btn" onclick="toggleSound()" title="Ljud">🔊</button>
@@ -389,7 +391,10 @@
           <button id="account-teacher-btn" class="btn btn-outline" style="display:none;" onclick="showView('teacher-view')">👨‍🏫 Teacher Panel</button>
           <button id="account-admin-btn" class="btn btn-outline" style="display:none;" onclick="showView('admin-view')">Admin Panel</button>
           <button class="btn btn-outline" onclick="toggleSound()">🔊 Slå på/av ljud</button>
+          <button class="btn btn-outline" onclick="contactSupport()">✉️ Kontakta support</button>
+          <button class="btn btn-outline" onclick="window.open('privacy.html','_blank')">🔒 Integritetspolicy</button>
           <button class="btn btn-danger" onclick="doLogout()">Logga ut</button>
+          <button class="btn btn-outline" style="color:#c62828; border-color:#c62828;" onclick="handleDeleteAccount()">🗑 Radera mitt konto</button>
         </div>
       </div>
 
@@ -655,7 +660,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
       getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-      onAuthStateChanged, signOut, updateProfile
+      onAuthStateChanged, signOut, updateProfile, sendPasswordResetEmail, deleteUser
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import {
       getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, onSnapshot, increment, arrayUnion, query, where
@@ -683,7 +688,7 @@
     window.__fb = {
       auth, db, doc, getDoc, setDoc, deleteDoc, collection, getDocs, onSnapshot, increment, arrayUnion, query, where,
       createUserWithEmailAndPassword, signInWithEmailAndPassword,
-      onAuthStateChanged, signOut, updateProfile, ADMIN_EMAILS, TEACHER_EMAILS
+      onAuthStateChanged, signOut, updateProfile, sendPasswordResetEmail, deleteUser, ADMIN_EMAILS, TEACHER_EMAILS
     };
 
     window.dispatchEvent(new Event('fb-ready'));
@@ -814,6 +819,48 @@
         errEl.innerText = friendlyAuthError(e.code);
       } finally {
         submitBtn.disabled = false;
+      }
+    }
+
+    async function handleForgotPassword() {
+      const email = document.getElementById('auth-email').value.trim();
+      const errEl = document.getElementById('auth-error');
+      errEl.style.color = '';
+      errEl.innerText = '';
+      if (!email) { errEl.innerText = 'Skriv in din e-postadress ovan först, klicka sedan på "Glömt lösenord?" igen.'; return; }
+      try {
+        await fb.sendPasswordResetEmail(fb.auth, email);
+        errEl.style.color = 'var(--primary)';
+        errEl.innerText = 'Ett e-postmeddelande för återställning av lösenord har skickats till ' + email + '.';
+      } catch (e) {
+        errEl.innerText = friendlyAuthError(e.code);
+      }
+    }
+
+    function contactSupport() {
+      const userEmail = (currentUser && currentUser.email) || '';
+      const subject = encodeURIComponent('Alif Quran Sverige – support');
+      const body = encodeURIComponent(`Hej,\n\nJag behöver hjälp med:\n\n\n---\nInloggad som: ${userEmail}`);
+      window.location.href = `mailto:quranacademyalif@gmail.com?subject=${subject}&body=${body}`;
+    }
+
+    async function handleDeleteAccount() {
+      if (!currentUser) return;
+      const sure = confirm('Är du helt säker? Ditt konto och all din data (poäng, XP, framsteg) kommer att raderas permanent. Detta kan INTE ångras.');
+      if (!sure) return;
+      const typed = prompt('Skriv "RADERA" (med stora bokstäver) för att bekräfta:');
+      if (typed !== 'RADERA') { alert('Avbrutet — texten matchade inte.'); return; }
+      try {
+        const uid = currentUser.uid;
+        await fb.deleteDoc(fb.doc(fb.db, 'users', uid));
+        await fb.deleteUser(currentUser);
+        alert('Ditt konto har raderats.');
+      } catch (e) {
+        if (e && e.code === 'auth/requires-recent-login') {
+          alert('Av säkerhetsskäl måste du logga in igen innan du kan radera ditt konto. Logga ut, logga in på nytt, och försök direkt igen.');
+        } else {
+          alert('Kunde inte radera kontot: ' + (e && e.message ? e.message : e));
+        }
       }
     }
 
